@@ -9,24 +9,51 @@ void printBN(char *msg, BIGNUM *a)
     OPENSSL_free(number_str);
 }
 
+BIGNUM *euclid1(BIGNUM *a, BIGNUM *b)
+{
+  BIGNUM *t;
+
+  while (!BN_is_zero(b)) {
+        if (BN_cmp(a, b) < 0) {
+          t = a;
+          a = b;
+          b = t;
+        }
+        if (!BN_sub(a, a, b)) {
+          goto err;
+        }
+  }
+  return a;
+err:
+  return NULL;
+}
+
 BIGNUM *euclid2(BIGNUM *a, BIGNUM *b)
 {
-    BIGNUM *t;
+  BN_CTX *ctx = BN_CTX_new();
+  BIGNUM *r = BN_new();
+  BIGNUM *t;
 
-    while(!BN_is_zero(b)) {
-        if(BN_cmp(a, b) < 0) {
-            t = a;
-            a = b;
-            b = t;
+  if (BN_cmp(a, b) < 0) {
+     t = a;
+     a = b;
+     b = t;
+  }
+
+  while (!BN_is_zero(b)) {
+        if(!BN_mod(r,a,b,ctx)){
+          goto err;
         }
-        if(!BN_sub(a, a, b)) {
-            goto err;
-        }
-    }
-    return a;
-    err:
-    return NULL;
+        BN_copy(a,b);
+        BN_copy(b,r);
+  }
+  BN_copy(r,a);
+  if(ctx != NULL) BN_CTX_free(ctx);
+  return r;
+err:
+  return NULL;
 }
+
 
 int main(int argc, char *argv[])
 {
