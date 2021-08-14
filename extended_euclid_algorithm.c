@@ -47,7 +47,7 @@ BIGNUM *XEuclid(BIGNUM *x, BIGNUM *y, const BIGNUM *a, const BIGNUM *b)
                 // x = x1 - q*x2
                 BN_mul(qx2, q, x2, ctx);
                 BN_sub(x, x1, qx2);
-                
+
                 // y = y1 - q*y2
                 BN_mul(qy2, q, y2, ctx);
                 BN_sub(y, y1, qy2);
@@ -62,7 +62,7 @@ BIGNUM *XEuclid(BIGNUM *x, BIGNUM *y, const BIGNUM *a, const BIGNUM *b)
                 BN_copy(y1, y2);
                 BN_copy(y2, y);
         }
-        // //pre_a랑 pre_b도 한번 더 대입해줘야함!
+
         // return gcd_;
         BN_copy(x, x1);
         BN_copy(y, y1);
