@@ -23,7 +23,9 @@ typedef struct _b10rsa_st {
 //RSA 구조체 포인터를 해제하는 함수
 int BOB10_RSA_free(BOB10_RSA *b10rsa)
 {
-
+    BN_free(b10rsa->d);
+    BN_free(b10rsa->e);
+    BN_free(b10rsa->n);
 };
 
 //RSA 키 생성 함수
