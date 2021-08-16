@@ -20,6 +20,66 @@ typedef struct _b10rsa_st {
     BIGNUM *n;
 }BOB10_RSA;
 
+BIGNUM *XEuclid(const BIGNUM *a, const BIGNUM *b)
+{
+    BIGNUM *x = BN_new();
+    BIGNUM *y = BN_new();
+    BIGNUM *q = BN_new(); // 몫
+    BIGNUM *r = BN_new(); // 나머지
+    BN_dec2bn(&r, "1");
+    BN_CTX *ctx = BN_CTX_new(); 
+
+    //인자 값 받아서 넣어주기
+    BIGNUM *a_ = BN_new();
+    BIGNUM *b_ = BN_new();
+    BN_copy(a_, a);
+    BN_copy(b_, b);
+
+    //기타 필요한 변수 선언
+    BIGNUM *x1 = BN_new();
+    BIGNUM *x2 = BN_new();
+    BIGNUM *y1 = BN_new();
+    BIGNUM *y2 = BN_new();
+    BIGNUM *qx2 = BN_new();
+    BIGNUM *qy2 = BN_new();
+
+    BN_dec2bn(&x1, "1");
+    BN_dec2bn(&x2, "0");
+    BN_dec2bn(&y1, "0");
+    BN_dec2bn(&y2, "1");
+
+    BIGNUM *gcd_ = BN_new();
+    while (!BN_is_zero(r)) // 나머지가 0일때 까지
+    {
+        // q(몫), r(나머지) 구하기
+        BN_div(q, r, a_, b_, ctx);
+
+        // x = x1 - q*x2
+        BN_mul(qx2, q, x2, ctx);
+        BN_sub(x, x1, qx2);
+
+        // y = y1 - q*y2
+        BN_mul(qy2, q, y2, ctx);
+        BN_sub(y, y1, qy2);
+
+        //대입하는 과정
+        BN_copy(a_, b_);
+        BN_copy(b_, r);
+
+        BN_copy(x1, x2);
+        BN_copy(x2, x);
+
+        BN_copy(y1, y2);
+        BN_copy(y2, y);
+    }
+
+    // return gcd_;
+    BN_copy(x, x1);
+    BN_copy(y, y1);
+
+    return x;
+}
+
 //RSA 구조체 포인터를 해제하는 함수
 int BOB10_RSA_free(BOB10_RSA *b10rsa)
 {
@@ -33,7 +93,31 @@ int BOB10_RSA_free(BOB10_RSA *b10rsa)
 // 출력 : b10rsa (구조체에 n, e, d 가  생성돼 있어야 함)
 int BOB10_RSA_KeyGen(BOB10_RSA *b10rsa, int nBits)
 {
+    //p, q값 설정
+    BIGNUM *p = BN_new();
+    BIGNUM *q = BN_new();
+    BN_CTX *ctx = BN_CTX_new();
+    BN_hex2bn(&p,  "0xC485F491D12EA7E6FEB95794E9FE0A819168AAC9D545C9E2AE0C561622F265FEB965754C875E049B19F3F945F2574D57FA6A2FC0A0B99A2328F107DD16ADA2A7");
+    BN_hex2bn(&q, "0xF9A91C5F20FBBCCC4114FEBABFE9D6806A52AECDF5C9BAC9E72A07B0AE162B4540C62C52DF8A8181ABCC1A9E982DEB84DE500B27E902CD8FDED6B545C067CE4F");
 
+    // (p-1), (q-1) 설정
+    BIGNUM *p_1 = BN_new();
+    BIGNUM *q_1 = BN_new();
+    BIGNUM *one = BN_new();
+    BN_is_one(one);
+    BN_sub(p_1, p, one);
+    BN_sub(q_1, q, one);
+
+    // phi(n) = (p-1)(q-1)
+    BIGNUM *phi_n = BN_new();
+    BN_mul(b10rsa->n, p, q, ctx);
+    BN_mul(phi_n, p_1, q_1, ctx);
+
+    // e 선택, mod phi(n)에 대한 e의 역원 d 구하기
+    BN_dec2bn(&b10rsa->e, "31");
+    b10rsa->d = XEuclid(b10rsa->e, phi_n);
+
+    return 0;
 };
 
 // RSA 암호화 함수
