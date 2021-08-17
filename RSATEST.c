@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <openssl/bn.h>
+#include <stdbool.h>
 
 void printBN(char *msg, BIGNUM * a)
 {
@@ -28,16 +29,6 @@ BOB10_RSA *BOB10_RSA_new() {
 
     return b10rsa;
 }
-
-// BOB10_RSA *BOB10_RSA_new()
-// {
-//     BOB10_RSA b10rsa;
-//     b10rsa.e = BN_new();
-//     b10rsa.d = BN_new();
-//     b10rsa.n = BN_new();
-
-//     return &b10rsa;
-// }
 
 BIGNUM *XEuclid(BIGNUM *x, BIGNUM *y, const BIGNUM *a, const BIGNUM *b)
 {
@@ -105,6 +96,72 @@ int BOB10_RSA_free(BOB10_RSA *b10rsa)
     BN_free(b10rsa->n);
 };
 
+BIGNUM *BOB10_RSA_PRIME_GEN(int nbit) {
+    BIGNUM *p = BN_new();
+    BIGNUM *p_one = BN_new();
+    BIGNUM *one = BN_new();
+    BN_one(one);
+    BN_sub(p_one, p, one);
+
+    BIGNUM *q = BN_new();
+    BIGNUM *k = BN_new();
+    BN_one(k);
+    BIGNUM *dv = BN_new();
+    BIGNUM *rem = BN_new();
+    BIGNUM *twok = BN_new(); //2^k
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *two = BN_new();
+    BN_dec2bn(&two, "2");
+    BIGNUM *res = BN_new();
+    BIGNUM *twokq = BN_new(); // 2^k*q
+    BIGNUM *aq = BN_new();
+    BIGNUM *mod_aq = BN_new(); // 2^q
+    BIGNUM *count = BN_new();
+    BN_zero(count);
+    BIGNUM *a_two_exp_q = BN_new();
+    bool type_ = false;
+
+
+    while(1) {
+        BN_rand(p, nbit, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ODD);
+        printf(".");
+        while(BN_is_zero(rem)) {
+            BN_exp(twok, two, k, ctx);
+            BN_div(dv, rem, p_one, twok, ctx);
+            BN_add(k, k, one);
+        }
+        BN_copy(q, dv);
+        BN_sub(k, k, one);
+        
+        BN_mul(twokq, twok, q, ctx);
+        BN_mod(res, p, twokq, ctx);
+        if(BN_cmp(res, twokq) == 0) {
+            BN_exp(aq, two, q, ctx);
+            BN_mod(mod_aq, p, aq, ctx);
+            if(BN_cmp(mod_aq, one) == 0 || BN_cmp(aq, p_one) == 0) {
+                printf(" [1번째 조건문] 완료 \n");
+                break;
+            }else {
+                printf(" [1번째 조건문] 미완료 \n");
+                while(count < k) {
+                    printf(" [2번째 조건문] 실행중 ... \n");
+                    BN_exp(aq, aq, two, ctx);
+                    if(BN_cmp(aq, p_one) == 0) {
+                        type_ = true;
+                        printf("[2번째 조건문] 완료\n");
+                        break;
+                    }
+                    BN_add(count, count, one);
+                }
+                if(type_ == true) {
+                    break;
+                }
+            }
+        }
+    }
+    return p;
+}
+
 //RSA 키 생성 함수
 // 입력 : nBits (RSA modulus bit size)
 // 출력 : b10rsa (구조체에 n, e, d 가  생성돼 있어야 함)
@@ -114,8 +171,10 @@ int BOB10_RSA_KeyGen(BOB10_RSA *b10rsa, int nBits)
     BIGNUM *p = BN_new();
     BIGNUM *q = BN_new();
     BN_CTX *ctx = BN_CTX_new();
-    BN_hex2bn(&p, "0xC485F491D12EA7E6FEB95794E9FE0A819168AAC9D545C9E2AE0C561622F265FEB965754C875E049B19F3F945F2574D57FA6A2FC0A0B99A2328F107DD16ADA2A7");
-    BN_hex2bn(&q, "0xF9A91C5F20FBBCCC4114FEBABFE9D6806A52AECDF5C9BAC9E72A07B0AE162B4540C62C52DF8A8181ABCC1A9E982DEB84DE500B27E902CD8FDED6B545C067CE4F");
+
+    //소수 생성
+    p = BOB10_RSA_PRIME_GEN(nBits);
+    q = BOB10_RSA_PRIME_GEN(nBits);
 
     // (p-1), (q-1) 설정
     BIGNUM *p_1 = BN_new();
@@ -132,11 +191,12 @@ int BOB10_RSA_KeyGen(BOB10_RSA *b10rsa, int nBits)
 
     // e 선택, mod phi(n)에 대한 e의 역원 d 구하기
     BN_dec2bn(&b10rsa->e, "31");
-    BIGNUM* x = BN_new();
-    BIGNUM* y = BN_new();
-    BIGNUM* gcd;
+    BIGNUM *x = BN_new();
+    BIGNUM *y = BN_new();
+    BIGNUM *gcd = BN_new();
+
     gcd = XEuclid(x, y, b10rsa->e, phi_n);
-    BN_mod(b10rsa, phi_n, e,);
+    BN_mod(b10rsa->d, x, phi_n, ctx);
 
     return 0;
 };
@@ -174,9 +234,9 @@ int main (int argc, char *argv[])
         }
         BOB10_RSA_KeyGen(b10rsa,1024);
         BN_print_fp(stdout,b10rsa->n);
-        printf(" ");
+        printf("\n");
         BN_print_fp(stdout,b10rsa->e);
-        printf(" ");
+        printf("\n");
         BN_print_fp(stdout,b10rsa->d);
         printf("\n");
     }else if(argc == 5){
