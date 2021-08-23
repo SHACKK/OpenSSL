@@ -96,74 +96,103 @@ int BOB10_RSA_free(BOB10_RSA *b10rsa)
     BN_free(b10rsa->n);
 };
 
-// BIGNUM *GenProbPrime(int qBits) {
-//     BIGNUM *p = BN_new();
-//     BIGNUM *p_one = BN_new();
-//     BIGNUM *one = BN_new();
-//     BN_one(one);
-//     BIGNUM *q = BN_new();
-//     BIGNUM *k = BN_new();
-//     BIGNUM *dv = BN_new();
-//     BIGNUM *rem = BN_new();
-//     BIGNUM *twok = BN_new(); //2^k
-//     BN_CTX *ctx_ = BN_CTX_new();
-//     BIGNUM *two = BN_new();
-//     BN_dec2bn(&two, "2");
-//     BIGNUM *res = BN_new();
-//     BIGNUM *twokq = BN_new(); // (2^k)*q
-//     BIGNUM *aq = BN_new();
-//     BIGNUM *mod_aq = BN_new(); // 2^q
-//     BIGNUM *count = BN_new();
-//     BN_one(count);
-//     bool type_ = false;
-//     BIGNUM *a = BN_new();
-//     BIGNUM *two_k = BN_new();
+BIGNUM *ExpMod(BIGNUM *res, BIGNUM *a, BIGNUM *e, BIGNUM *m) {
+        BIGNUM *A = BN_new();
+        BN_dec2bn(&A, "1");
+        BIGNUM *B = BN_new();
+        BN_copy(B, a);
+        // BIGNUM *q = BN_new();
+        // BN_dec2bn(q, "1");
+        BIGNUM *two = BN_new();
+        BN_dec2bn(&two, "2");
+        BIGNUM *r = BN_new();
+        BN_CTX *ctx = BN_CTX_new();
 
-//     while(true) {
-//         BN_rand(p, qBits, BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ODD);
-//         BN_sub(p_one, p, one);
-//         BN_dec2bn(&rem, "0");
-//         BN_dec2bn(&dv, "1");
+        while (!BN_is_zero(e))
+        {
+                BN_div(e,r,e, two, ctx);
+                if (BN_is_one(r)) {
+                        BN_mul(A, A, B, ctx);
+                        BN_mul(B, B, B, ctx);
+                } else {
+                        BN_mul(B, B, B, ctx);
+                }
+                BN_mod(A, A, m, ctx);
+                BN_mod(B, B, m, ctx);
+        }
 
-//         BN_dec2bn(&k, "0");
+        BN_copy(res, A);
+        return res;
+}
 
-//         while(BN_is_zero(rem)) {
-//             BN_add(k, k, one);
-//             BN_exp(twok, two, k, ctx_);
-//             BN_copy(q, dv);
-//             BN_div(dv, rem, p_one, twok, ctx_);
-//         }
+BIGNUM *GenProbPrime(int qBits) {
+    BIGNUM *p = BN_new();
+    BIGNUM *p_one = BN_new();
+    BIGNUM *one = BN_new();
+    BN_one(one);
+    BIGNUM *q = BN_new();
+    BIGNUM *k = BN_new();
+    BIGNUM *dv = BN_new();
+    BIGNUM *rem = BN_new();
+    BIGNUM *twok = BN_new(); //2^k
+    BN_CTX *ctx_ = BN_CTX_new();
+    BIGNUM *two = BN_new();
+    BN_dec2bn(&two, "2");
+    BIGNUM *res = BN_new();
+    BIGNUM *twokq = BN_new(); // (2^k)*q
+    BIGNUM *aq = BN_new();
+    BIGNUM *mod_aq = BN_new(); // 2^q
+    BIGNUM *count = BN_new();
+    BN_one(count);
+    bool type_ = false;
+    BIGNUM *a = BN_new();
+    BIGNUM *two_k = BN_new();
 
-//         //BN_copy(q, dv);
-//         BN_sub(k, k, one);
+    while(true) {
+        BN_rand(p, qBits, BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ODD);
+        BN_sub(p_one, p, one);
+        BN_dec2bn(&rem, "0");
+        BN_dec2bn(&dv, "1");
 
-//         BN_mul(twokq, twok, q, ctx_);
-//         BN_mod(res, twokq, p, ctx_);
-//         if(BN_cmp(p_one, res) == 0) {
-//             BN_rand(a, 8, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ODD);
-//             BN_exp(aq, a, q, ctx_);
-//             BN_mod(mod_aq, aq, p, ctx_);
-//             if(BN_cmp(mod_aq, one) == 0 || BN_cmp(mod_aq, p_one) == 0) {
-//                 break;
-//             }else {
-//                 while(count < k) {
-//                     BN_mul(q, q, two, ctx_);
-//                     BN_exp(aq, a, q, ctx_);
-//                     BN_mod(aq, aq, p, ctx_);
-//                     if(BN_cmp(aq, p_one) == 0) {
-//                         type_ = true;
-//                         break;
-//                     }
-//                     BN_add(count, count, one);
-//                 }
-//                 if(type_ == true) {
-//                     break;
-//                 }
-//             }
-//         }
-//     }
-//     return p;
-// }
+        BN_dec2bn(&k, "0");
+
+        while(BN_is_zero(rem)) {
+            BN_add(k, k, one);
+            BN_exp(twok, two, k, ctx_);
+            BN_copy(q, dv);
+            BN_div(dv, rem, p_one, twok, ctx_);
+        }
+
+        //BN_copy(q, dv);
+        BN_sub(k, k, one);
+        BN_exp(twok, two, k, ctx_);
+        BN_mul(twokq, twok, q, ctx_);
+        BN_mod(res, twokq, p, ctx_);
+
+        if(BN_cmp(p_one, res) == 0) {
+            BN_dec2bn(&a, "3");
+            ExpMod(mod_aq, a, q, p);
+            if(BN_cmp(mod_aq, one) == 0 || BN_cmp(mod_aq, p_one) == 0) {
+                break;
+            }else {
+                while(count < k) {
+                    BN_mul(q, q, two, ctx_);
+                    BN_exp(aq, a, q, ctx_);
+                    BN_mod(aq, aq, p, ctx_);
+                    if(BN_cmp(aq, p_one) == 0) {
+                        type_ = true;
+                        break;
+                    }
+                    BN_add(count, count, one);
+                }
+                if(type_ == true) {
+                    break;
+                }
+            }
+        }
+    }
+    return p;
+}
 
 //RSA 키 생성 함수
 // 입력 : nBits (RSA modulus bit size)
@@ -171,17 +200,17 @@ int BOB10_RSA_free(BOB10_RSA *b10rsa)
 int BOB10_RSA_KeyGen(BOB10_RSA *b10rsa, int nBits)
 {
     //p, q값 설정
-    BIGNUM *p;
-    BIGNUM *q;
+    BIGNUM *p = BN_new();
+    BIGNUM *q = BN_new();
     BN_CTX *ctx = BN_CTX_new();
 
     //소수 생성
     int qBits = nBits / 2;
-    // p = GenProbPrime(qBits);
-    // q = GenProbPrime(qBits);
+    p = GenProbPrime(qBits);
+    q = GenProbPrime(qBits);
     
-    BN_hex2bn(&p , "C485F491D12EA7E6FEB95794E9FE0A819168AAC9D545C9E2AE0C561622F265FEB965754C875E049B19F3F945F2574D57FA6A2FC0A0B99A2328F107DD16ADA2A7");
-    BN_hex2bn(&q , "F9A91C5F20FBBCCC4114FEBABFE9D6806A52AECDF5C9BAC9E72A07B0AE162B4540C62C52DF8A8181ABCC1A9E982DEB84DE500B27E902CD8FDED6B545C067CE4F");
+    //BN_hex2bn(&p , "C485F491D12EA7E6FEB95794E9FE0A819168AAC9D545C9E2AE0C561622F265FEB965754C875E049B19F3F945F2574D57FA6A2FC0A0B99A2328F107DD16ADA2A7");
+    //BN_hex2bn(&q , "F9A91C5F20FBBCCC4114FEBABFE9D6806A52AECDF5C9BAC9E72A07B0AE162B4540C62C52DF8A8181ABCC1A9E982DEB84DE500B27E902CD8FDED6B545C067CE4F");
 
     // (p-1), (q-1) 설정
     BIGNUM *p_1 = BN_new();
