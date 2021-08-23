@@ -96,16 +96,14 @@ int BOB10_RSA_free(BOB10_RSA *b10rsa)
     BN_free(b10rsa->n);
 };
 
-BIGNUM *BOB10_RSA_PRIME_GEN(int nbit) {
+BIGNUM *BOB10_RSA_PRIME_GEN(int nbits) {
+    printf("..");
     BIGNUM *p = BN_new();
     BIGNUM *p_one = BN_new();
     BIGNUM *one = BN_new();
     BN_one(one);
-    BN_sub(p_one, p, one);
-
     BIGNUM *q = BN_new();
     BIGNUM *k = BN_new();
-    BN_one(k);
     BIGNUM *dv = BN_new();
     BIGNUM *rem = BN_new();
     BIGNUM *twok = BN_new(); //2^k
@@ -113,32 +111,40 @@ BIGNUM *BOB10_RSA_PRIME_GEN(int nbit) {
     BIGNUM *two = BN_new();
     BN_dec2bn(&two, "2");
     BIGNUM *res = BN_new();
-    BIGNUM *twokq = BN_new(); // 2^k*q
+    BIGNUM *twokq = BN_new(); // (2^k)*q
     BIGNUM *aq = BN_new();
     BIGNUM *mod_aq = BN_new(); // 2^q
     BIGNUM *count = BN_new();
     BN_zero(count);
-    BIGNUM *a_two_exp_q = BN_new();
     bool type_ = false;
+    BIGNUM *a = BN_new();
 
-
+    printf("소수 생성중...");
     while(1) {
-        BN_rand(p, nbit, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ODD);
-        printf(".");
+        BN_rand(p, (nbits/2), BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ODD);
+        BN_sub(p_one, p, one);
+        BN_dec2bn(&rem, "0");
+        BN_dec2bn(&dv, "1");
+
+        BN_dec2bn(&k, "0");
         while(BN_is_zero(rem)) {
-            BN_exp(twok, two, k, ctx);
-            BN_div(dv, rem, p_one, twok, ctx);
             BN_add(k, k, one);
+            BN_exp(twok, two, k, ctx);
+            BN_copy(q, dv);
+            BN_div(dv, rem, p_one, twok, ctx);
         }
-        BN_copy(q, dv);
+
+        //BN_copy(q, dv);
         BN_sub(k, k, one);
-        
+
         BN_mul(twokq, twok, q, ctx);
-        BN_mod(res, p, twokq, ctx);
-        if(BN_cmp(res, twokq) == 0) {
-            BN_exp(aq, two, q, ctx);
-            BN_mod(mod_aq, p, aq, ctx);
-            if(BN_cmp(mod_aq, one) == 0 || BN_cmp(aq, p_one) == 0) {
+        BN_mod(res, twokq, p, ctx);
+        if(BN_cmp(p_one, res) == 0) {
+            printf("아무거나하나");
+            BN_rand(a, 8, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ODD);
+            BN_exp(aq, a, q, ctx);
+            BN_mod(mod_aq, aq, p, ctx);
+            if(BN_cmp(mod_aq, one) == 0 || BN_cmp(mod_aq, p_one) == 0) {
                 printf(" [1번째 조건문] 완료 \n");
                 break;
             }else {
@@ -146,6 +152,7 @@ BIGNUM *BOB10_RSA_PRIME_GEN(int nbit) {
                 while(count < k) {
                     printf(" [2번째 조건문] 실행중 ... \n");
                     BN_exp(aq, aq, two, ctx);
+                    BN_mod(aq, aq, p, ctx);
                     if(BN_cmp(aq, p_one) == 0) {
                         type_ = true;
                         printf("[2번째 조건문] 완료\n");
@@ -168,11 +175,12 @@ BIGNUM *BOB10_RSA_PRIME_GEN(int nbit) {
 int BOB10_RSA_KeyGen(BOB10_RSA *b10rsa, int nBits)
 {
     //p, q값 설정
-    BIGNUM *p = BN_new();
-    BIGNUM *q = BN_new();
+    BIGNUM *p;
+    BIGNUM *q;
     BN_CTX *ctx = BN_CTX_new();
 
     //소수 생성
+    printf("소수생성 전");
     p = BOB10_RSA_PRIME_GEN(nBits);
     q = BOB10_RSA_PRIME_GEN(nBits);
 
@@ -223,10 +231,10 @@ int BOB10_RSA_Dec(BIGNUM *m,BIGNUM *c, BOB10_RSA *b10rsa)
 
 int main (int argc, char *argv[])
 {
+    printf("하이");
     BOB10_RSA *b10rsa = BOB10_RSA_new();
     BIGNUM *in = BN_new();
     BIGNUM *out = BN_new();
-
     if(argc == 2){
         if(strncmp(argv[1],"-k",2)){
             PrintUsage();
