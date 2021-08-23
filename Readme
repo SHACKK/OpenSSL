@@ -1,7 +1,6 @@
 OpenSSL 컴파일 예시
 
-1. gcc -c xeulid.o xeuclid.c -lcrypto
-2. gcc -o xeuclid xeucoid.o -lcrypto
+gcc -o xeuclid xeucoid.c -lcrypto
 
 !! 명령어 뒤에 -lcrypto 옵션이 붙어야 한다.
 
