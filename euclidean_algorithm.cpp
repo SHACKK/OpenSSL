@@ -9,6 +9,7 @@ void printBN(char *msg, BIGNUM *a)
     OPENSSL_free(number_str);
 }
 
+
 BIGNUM *euclid1(BIGNUM *a, BIGNUM *b)
 {
   BIGNUM *t;
